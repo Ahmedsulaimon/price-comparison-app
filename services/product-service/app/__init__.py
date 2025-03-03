@@ -1,14 +1,9 @@
-
-import os
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import exc
 from time import sleep
+from config import Config
 
-import sys
-sys.path.insert(0, os.getcwd()+"/app")
-import config
-import routes
 # Create database instance
 db = SQLAlchemy()
 
@@ -18,7 +13,7 @@ def create_app():
     
     # Load configuration from config.py
    
-    app.config.from_object(config.Config)
+    app.config.from_object(Config)
     
     # Initialize database with app
     db.init_app(app)
@@ -41,19 +36,7 @@ def create_app():
                 raise RuntimeError("Failed to connect to database after 5 attempts")
             
     # Import routes after app creation to avoid circular imports
-    
-    app.register_blueprint(routes.product_bp)
+    from .routes import product_bp
+    app.register_blueprint(product_bp)
 
     return app
-
-# Create Flask application instance
-app = create_app()
-
-if __name__ == '__main__':
-    # Start the development server
-    app.run(
-        host=app.config.get('HOST', '0.0.0.0'),
-        port=app.config.get('PORT', 5000),
-        debug=app.config.get('DEBUG', False)
-    )
-

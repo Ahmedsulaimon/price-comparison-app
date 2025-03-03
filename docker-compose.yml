@@ -1,0 +1,62 @@
+
+
+services:
+  product-service:
+    build: ./services/product-service
+    ports:
+      - "5000:5000"
+    depends_on:
+      - database
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@database:5432/product_db
+    networks:
+      - backend
+
+  scraping-service:
+    build: ./services/scraping-service
+    ports:
+      - "5001:5001"
+    networks:
+      - backend
+
+  image-recognition-service:
+    build: ./services/image-recognition-service
+    ports:
+      - "5002:5002"
+    networks:
+      - backend
+
+  gateway:
+    build: ./gateway
+    ports:
+      - "5003:5003"
+    depends_on:
+      - product-service
+      - scraping-service
+      - image-recognition-service
+        
+    networks:
+      - backend
+
+  database:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: product_db
+    ports:
+      - "5432:5432"
+    volumes:
+      #- pgdata:/var/lib/postgresql/data
+      - ./services/product-service/app/database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - backend
+    healthcheck:
+       test: ["CMD", "pg_isready", "-U", "postgres"]
+       interval: 10s
+       retries: 5
+       
+networks:
+  backend:
+
