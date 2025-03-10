@@ -47,3 +47,5 @@
 |   |-- requirement.txt
 |   |-- routes.py
 |--docker-compose.yml
+#scraper
+utils -> base -> extractors ->factory -> models - routes -> __init__.py -> main
