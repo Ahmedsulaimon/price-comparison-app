@@ -27,12 +27,16 @@ class TescoScraper(BaseScraper):
         
         try:
             # These selectors need to be updated based on Tesco's actual HTML structure
+            
+            #<div class="styled__StyledNonInteractiveContainer-sc-1de15j6-7 klymXO ddsweb-rating__container" data-testid="star-rating" aria-label="Average customer rating 4 out of 5 stars"><svg class="ddsweb-rating__icon-active" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" fill="none"><path fill="var(--ddsweb-theme-colors-tesco-blue, #00539f)" stroke="var(--ddsweb-theme-colors-grayscale, #666666)" d="M6.24228 9.51529L6 9.38108L5.75772 9.51529L2.9631 11.0633L3.50417 7.74036L3.54466 7.49166L3.36886 7.31115L1.03607 4.91585L4.23368 4.42624L4.49754 4.38584L4.61078 4.14411L6 1.17863L7.38922 4.14411L7.50246 4.38584L7.76632 4.42624L10.9639 4.91585L8.63114 7.31115L8.45534 7.49166L8.49583 7.74035L9.0369 11.0633L6.24228 9.51529Z"></path></svg><svg class="ddsweb-rating__icon-active" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" fill="none"><path fill="var(--ddsweb-theme-colors-tesco-blue, #00539f)" stroke="var(--ddsweb-theme-colors-grayscale, #666666)" d="M6.24228 9.51529L6 9.38108L5.75772 9.51529L2.9631 11.0633L3.50417 7.74036L3.54466 7.49166L3.36886 7.31115L1.03607 4.91585L4.23368 4.42624L4.49754 4.38584L4.61078 4.14411L6 1.17863L7.38922 4.14411L7.50246 4.38584L7.76632 4.42624L10.9639 4.91585L8.63114 7.31115L8.45534 7.49166L8.49583 7.74035L9.0369 11.0633L6.24228 9.51529Z"></path></svg><svg class="ddsweb-rating__icon-active" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" fill="none"><path fill="var(--ddsweb-theme-colors-tesco-blue, #00539f)" stroke="var(--ddsweb-theme-colors-grayscale, #666666)" d="M6.24228 9.51529L6 9.38108L5.75772 9.51529L2.9631 11.0633L3.50417 7.74036L3.54466 7.49166L3.36886 7.31115L1.03607 4.91585L4.23368 4.42624L4.49754 4.38584L4.61078 4.14411L6 1.17863L7.38922 4.14411L7.50246 4.38584L7.76632 4.42624L10.9639 4.91585L8.63114 7.31115L8.45534 7.49166L8.49583 7.74035L9.0369 11.0633L6.24228 9.51529Z"></path></svg><svg class="ddsweb-rating__icon-active" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" fill="none"><path fill="var(--ddsweb-theme-colors-tesco-blue, #00539f)" stroke="var(--ddsweb-theme-colors-grayscale, #666666)" d="M6.24228 9.51529L6 9.38108L5.75772 9.51529L2.9631 11.0633L3.50417 7.74036L3.54466 7.49166L3.36886 7.31115L1.03607 4.91585L4.23368 4.42624L4.49754 4.38584L4.61078 4.14411L6 1.17863L7.38922 4.14411L7.50246 4.38584L7.76632 4.42624L10.9639 4.91585L8.63114 7.31115L8.45534 7.49166L8.49583 7.74035L9.0369 11.0633L6.24228 9.51529Z"></path></svg><svg class="ddsweb-rating__icon-inactive" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" fill="none"><path fill="var(--ddsweb-theme-colors-white, #ffffff)" stroke="var(--ddsweb-theme-colors-grayscale, #666666)" d="M6.24228 9.51529L6 9.38108L5.75772 9.51529L2.9631 11.0633L3.50417 7.74036L3.54466 7.49166L3.36886 7.31115L1.03607 4.91585L4.23368 4.42624L4.49754 4.38584L4.61078 4.14411L6 1.17863L7.38922 4.14411L7.50246 4.38584L7.76632 4.42624L10.9639 4.91585L8.63114 7.31115L8.45534 7.49166L8.49583 7.74035L9.0369 11.0633L6.24228 9.51529Z"></path></svg><p class="text__StyledText-sc-1jpzi8m-0 kiGrpI ddsweb-text styled__StyledHint-sc-1de15j6-8 MfAbW ddsweb-rating__hint">4 (1)</p></div>
+            #<h3 class="component__StyledHeading-sc-1t0ixqu-0 iDJPjF ddsweb-heading styled-sc-mz7xly-0 kXoSwE styled__StyledTitle-sc-1a6zg7t-0 etoGWB b_hC4 ddsweb-title-link__container"><a class="styled__Anchor-sc-1i711qa-0 gRXcDF ddsweb-title-link__link ddsweb-link__anchor" href="/groceries/en-GB/products/325118760" aria-label="Ashley 18pc Plastic Food Bag Clips Set - 4 Sizes - Multicolour"><span class="styled__Text-sc-1i711qa-1 bsLJsh ddsweb-link__text">Ashley 18pc Plastic Food Bag Clips Set - 4 Sizes - Multicolour</span></a></h3>
+            #<p class="text__StyledText-sc-1jpzi8m-0 eWKcpa ddsweb-text styled__StyledFootnote-sc-6tl8kn-3 cOHloe">Sold and sent by<span class="styled__Name-sc-6tl8kn-0 iWxIC">Rinkit</span></p>
             product = {
                 "store": "Tesco",
                 "url": url,
                 "timestamp": datetime.now().isoformat(),
                 "name": ProductExtractor.extract_title(
-                    soup, 'span.styled__Text-sc-1i711qa-1 bsLJsh ddsweb-link__text'
+                    soup, 'h3.component__StyledHeading-sc-1t0ixqu-0 iDJPjF ddsweb-heading styled-sc-mz7xly-0 kXoSwE styled__StyledTitle-sc-1a6zg7t-0 etoGWB b_hC4 ddsweb-title-link__container'
                 ),
                 "price": ProductExtractor.extract_price(
                     soup, 'p.text__StyledText-sc-1jpzi8m-0 gyHOWz ddsweb-text styled__PriceText-sc-v0qv7n-1 cXlRF'
@@ -44,10 +48,10 @@ class TescoScraper(BaseScraper):
                     soup, 'p.text__StyledText-sc-1jpzi8m-0 eWKcpa ddsweb-text'
                 ),
                 "rating": ProductExtractor.extract_rating(
-                    soup, 'span.star-rating__score'
+                    soup, 'div.styled__StyledNonInteractiveContainer-sc-1de15j6-7 klymXO ddsweb-rating__container'
                 ),
                 "manufacturer": ProductExtractor.extract_manufacturer(
-                    soup, 'p.span.styled__Name-sc-6tl8kn-0.iWxIC'
+                    soup, 'p.text__StyledText-sc-1jpzi8m-0 eWKcpa ddsweb-text styled__StyledFootnote-sc-6tl8kn-3 cOHloe'
                 ),
                 "description": ProductExtractor.extract_description(
                     soup, '.product-description'
@@ -65,6 +69,8 @@ class TescoScraper(BaseScraper):
                 "error": str(e),
                 "timestamp": datetime.now().isoformat()
             }
+        
+
     
     def search_products(self, query: str, category: Optional[str] = None) -> List[Dict[str, Any]]:
         """Search for products on Tesco based on a query."""
@@ -123,9 +129,9 @@ class TescoScraper(BaseScraper):
         products = []
         # Update this selector based on Tesco's actual HTML structure
        
-        product_elements = soup.select("ul.YObNe")
+        product_elements = soup.select("li.WL_DZ")
         
-        for product_element in product_elements[:200]:  # Limit to first 200
+        for product_element in product_elements[:20]:  # Limit to first 20
             try:
                 product_link = ProductExtractor.extract_product_link(
                     product_element, 
@@ -139,7 +145,7 @@ class TescoScraper(BaseScraper):
                         "store": "Tesco",
                         "url": product_link,
                         "name": ProductExtractor.extract_title(
-                            product_element, "h3.span.styled__Text-sc-1i711qa-1.bsLJsh.ddsweb-link__text"
+                            product_element, "h3.component__StyledHeading-sc-1t0ixqu-0 iDJPjF ddsweb-heading styled-sc-mz7xly-0 kXoSwE styled__StyledTitle-sc-1a6zg7t-0 etoGWB b_hC4 ddsweb-title-link__container"
                         ),
                         "price": ProductExtractor.extract_price(
                             product_element, "p.text__StyledText-sc-1jpzi8m-0.gyHOWz.ddsweb-text.styled__PriceText-sc-v0qv7n-1.cXlRF"
@@ -149,6 +155,12 @@ class TescoScraper(BaseScraper):
                         ),
                         "shipping": ProductExtractor.extract_shipping_cost(
                             product_element, "p.text__StyledText-sc-1jpzi8m-0.eWKcpa.ddsweb-text"
+                        ),
+                         "manufacturer": ProductExtractor.extract_manufacturer(
+                            product_element, 'p.text__StyledText-sc-1jpzi8m-0 eWKcpa ddsweb-text styled__StyledFootnote-sc-6tl8kn-3 cOHloe'
+                        ),
+                         "rating": ProductExtractor.extract_rating(
+                            product_element, 'div.styled__StyledNonInteractiveContainer-sc-1de15j6-7 klymXO ddsweb-rating__container'
                         ),
                         "timestamp": datetime.now().isoformat()
                     }
