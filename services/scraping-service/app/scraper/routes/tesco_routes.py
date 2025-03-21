@@ -2,12 +2,12 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks, Query, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional
 import logging
-from .scraper.models import (
+from ...scraper.models import (
     ProductRequest, SearchRequest, ProductResponse, 
     BulkScrapeRequest, ErrorResponse, HealthResponse
 )
-from .scraper.factory import ScraperFactory
-from .scraper.utils import logger
+from ...scraper.factory import ScraperFactory
+from ...scraper.utils import logger
 
 app = FastAPI(
     title="Scraping Service API",
@@ -144,7 +144,7 @@ async def browse_tesco_marketplace():
     try:
         scraper = ScraperFactory.get_scraper("tesco")
         # We need to cast the scraper to TescoScraper to access the browse_marketplace method
-        from .scraper.tesco import TescoScraper
+        from ...scraper.controller.tesco import TescoScraper
         if isinstance(scraper, TescoScraper):
             products = scraper.browse_marketplace()
             return products
@@ -159,3 +159,26 @@ async def browse_tesco_marketplace():
             status_code=500,
             detail=f"Unexpected error: {str(e)}"
         )
+    
+# Tesco fresh groceries browse endpoint
+@app.get("/browse/tesco/freshgroceries", response_model=List[ProductResponse], tags=["Browsing"])
+async def browse_tesco_marketplace():
+    """Browse Tesco groceries for featured products."""
+    try:
+        scraper = ScraperFactory.get_scraper("tesco")
+        # We need to cast the scraper to TescoScraper to access the browse_groceries method
+        from ...scraper.controller.tesco import TescoScraper
+        if isinstance(scraper, TescoScraper):
+            products = scraper.browse_groceries()
+            return products
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to initialize Tesco scraper correctly"
+            )
+    except Exception as e:
+        logger.error(f"Error browsing Tesco fresh groceries: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Unexpected error: {str(e)}"
+        )    

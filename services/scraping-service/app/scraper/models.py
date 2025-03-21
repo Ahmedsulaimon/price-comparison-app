@@ -18,6 +18,7 @@ class ProductResponse(BaseModel):
     store: str
     url: str
     name: Optional[str] = None
+    discount_price: Optional[str] = None
     price: Optional[float] = None
     image_url: Optional[str] = None
     currency: str = "GBP"
@@ -33,6 +34,7 @@ class ProductResponse(BaseModel):
                 "store": "Tesco",
                 "url": "https://www.tesco.com/groceries/en-GB/products/123456789",
                 "name": "Organic Bananas 5 Pack",
+                "discount": "1.20 clubcard",
                 "price": 1.49,
                 "image_url": "https://example.com/image.jpg",
                 "currency": "GBP",

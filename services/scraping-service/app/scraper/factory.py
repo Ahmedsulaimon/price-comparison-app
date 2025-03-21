@@ -1,6 +1,6 @@
 from typing import Dict, Type
 from .base import BaseScraper
-from .tesco import TescoScraper
+from ..scraper.controller.tesco import TescoScraper
 # Import other scrapers as you implement them
 
 class ScraperFactory:

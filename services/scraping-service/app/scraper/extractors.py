@@ -5,14 +5,20 @@ class ProductExtractor:
     """Helper class for extracting product details from HTML."""
     
     @staticmethod
-    def extract_title(soup: BeautifulSoup, selector: str = 'h1.product-title') -> Optional[str]:
+    def extract_title(soup: BeautifulSoup, selector: str = "h3 a span") -> Optional[str]:
         """Extract product title using the provided selector."""
         title_tag = soup.select_one(selector)
         return title_tag.text.strip() if title_tag else None
     
     @staticmethod
+    def extract_discounted_price(soup: BeautifulSoup, selector: str = 'span.price') -> Optional[float]:
+        """Extract product discount using the provided selector."""
+        discount_tag = soup.select_one(selector)
+        return discount_tag.text.strip() if discount_tag else None
+    
+    @staticmethod
     def extract_price(soup: BeautifulSoup, selector: str = 'span.price') -> Optional[float]:
-        """Extract product price using the provided selector."""
+        """Extract product discount using the provided selector."""
         price_tag = soup.select_one(selector)
         if price_tag:
             price_text = price_tag.text.strip()
