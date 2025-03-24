@@ -11,7 +11,7 @@ class ProductExtractor:
         return title_tag.text.strip() if title_tag else None
     
     @staticmethod
-    def extract_discounted_price(soup: BeautifulSoup, selector: str = 'span.price') -> Optional[float]:
+    def extract_discounted_price(soup: BeautifulSoup, selector: str = 'a p p') -> Optional[float]:
         """Extract product discount using the provided selector."""
         discount_tag = soup.select_one(selector)
         return discount_tag.text.strip() if discount_tag else None
@@ -31,10 +31,26 @@ class ProductExtractor:
         return None
     
     @staticmethod
+    def extract_size(soup: BeautifulSoup, selector: str = 'span.price') -> Optional[float]:
+        """Extract product size using the provided selector."""
+        size_tag = soup.select_one(selector)
+        return size_tag.text.strip() if size_tag else None
+    
+    @staticmethod
     def extract_image_url(soup: BeautifulSoup, selector: str = 'img.product-image') -> Optional[str]:
         """Extract product image URL using the provided selector."""
         img_tag = soup.select_one(selector)
-        return img_tag.get('src') if img_tag and 'src' in img_tag.attrs else None
+        # Check for src or srcset attributes
+        if img_tag:
+            if 'src' in img_tag.attrs:
+                return img_tag.get('src')
+            elif 'srcset' in img_tag.attrs:
+                # Get the first URL from srcset
+                srcset = img_tag.get('srcset')
+                urls = srcset.split(',')
+                if urls:
+                    return urls[0].split(' ')[0]
+        return None
     
     @staticmethod
     def extract_shipping_cost(soup: BeautifulSoup, selector: str = 'span.shipping-cost') -> Optional[str]:
@@ -43,20 +59,16 @@ class ProductExtractor:
         return shipping_tag.text.strip() if shipping_tag else None
     
     @staticmethod
-    def extract_rating(soup: BeautifulSoup, selector: str = 'div.rating') -> Optional[float]:
-        """Extract product rating using the provided selector."""
-        rating_tag = soup.select_one(selector)
-        if rating_tag:
+    def extract_rating(product_element, selector: str, attr: str = "alt") -> Optional[float]:
+        """Extract the product rating from the image alt attribute."""
+        rating_element = product_element.select_one(selector)
+        if rating_element and rating_element.has_attr(attr):
             try:
-                rating_text = rating_tag.text.strip()
-                # Extract first number from text
-                import re
-                rating_match = re.search(r'(\d+(\.\d+)?)', rating_text)
-                if rating_match:
-                    return float(rating_match.group(1))
+                return float(rating_element[attr])
             except ValueError:
-                pass
+                return None
         return None
+
     
     @staticmethod
     def extract_manufacturer(soup: BeautifulSoup, selector: str = 'span.manufacturer') -> Optional[str]:

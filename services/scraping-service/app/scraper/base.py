@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 from .utils import RateLimiter, UserAgentRotator, logger
+import time
 
 class BaseScraper(ABC):
     """Abstract base class for scrapers."""
@@ -23,6 +24,7 @@ class BaseScraper(ABC):
             'Accept-Language': 'en-US,en;q=0.5',
             'Connection': 'keep-alive',
             'Upgrade-Insecure-Requests': '1',
+            
         }
     
     def fetch_page(self, url: str) -> Optional[BeautifulSoup]:
@@ -30,7 +32,7 @@ class BaseScraper(ABC):
         try:
             # Respect rate limits
             self.rate_limiter.wait()
-            
+           
             # Make the request
             response = self.session.get(url, headers=self.get_headers(), timeout=30)
             response.raise_for_status()

@@ -20,6 +20,7 @@ class ProductResponse(BaseModel):
     name: Optional[str] = None
     discount_price: Optional[str] = None
     price: Optional[float] = None
+    size:  Optional[str] = None
     image_url: Optional[str] = None
     currency: str = "GBP"
     shipping: Optional[str] = None
@@ -36,6 +37,7 @@ class ProductResponse(BaseModel):
                 "name": "Organic Bananas 5 Pack",
                 "discount": "1.20 clubcard",
                 "price": 1.49,
+                "size": "500g",
                 "image_url": "https://example.com/image.jpg",
                 "currency": "GBP",
                 "shipping": "Free delivery",

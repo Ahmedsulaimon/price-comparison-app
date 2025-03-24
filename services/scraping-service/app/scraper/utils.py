@@ -16,7 +16,7 @@ logger = logging.getLogger("scraper")
 class RateLimiter:
     """Handles rate limiting for scraping requests to avoid overloading servers."""
     
-    def __init__(self, requests_per_minute: int = 20):
+    def __init__(self, requests_per_minute: int = 5):
         self.requests_per_minute = requests_per_minute
         self.minimum_interval = 60.0 / requests_per_minute
         self.last_request_time = 0

@@ -1,6 +1,10 @@
 from typing import Dict, Type
 from .base import BaseScraper
 from ..scraper.controller.tesco import TescoScraper
+from ..scraper.controller.aldi import AldiScraper
+from ..scraper.controller.iceland import IcelandScraper
+from ..scraper.controller.sainsbury import SainsburyScraper
+
 # Import other scrapers as you implement them
 
 class ScraperFactory:
@@ -9,7 +13,9 @@ class ScraperFactory:
     # Registry of available scrapers
     _registry: Dict[str, Type[BaseScraper]] = {
         "tesco": TescoScraper,
-        # Add more scrapers as implemented
+        "aldi":  AldiScraper,
+        "iceland": IcelandScraper,
+         "sainsbury": SainsburyScraper
     }
     
     @classmethod
