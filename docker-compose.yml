@@ -1,5 +1,4 @@
 
-
 services:
   product-service:
     build: ./services/product-service

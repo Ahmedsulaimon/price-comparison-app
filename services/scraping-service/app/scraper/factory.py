@@ -4,6 +4,8 @@ from ..scraper.controller.tesco import TescoScraper
 from ..scraper.controller.aldi import AldiScraper
 from ..scraper.controller.iceland import IcelandScraper
 from ..scraper.controller.sainsbury import SainsburyScraper
+from ..scraper.controller.morrison import MorrisonScraper
+
 
 # Import other scrapers as you implement them
 
@@ -15,7 +17,8 @@ class ScraperFactory:
         "tesco": TescoScraper,
         "aldi":  AldiScraper,
         "iceland": IcelandScraper,
-         "sainsbury": SainsburyScraper
+         "sainsbury": SainsburyScraper,
+         "morrison" : MorrisonScraper
     }
     
     @classmethod

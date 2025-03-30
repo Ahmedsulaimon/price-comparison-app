@@ -1,3 +1,5 @@
+
+
 import logging
 from typing import Dict, List, Any, Optional
 from datetime import datetime
@@ -14,13 +16,13 @@ import time
 from tenacity import retry, stop_after_attempt, wait_fixed
 from ...scraper.utils import logger
 
-class SainsburyScraper:
-    """Scraper for Sainsbury grocery products."""
-
-    base_url = "https://www.sainsburys.co.uk"
-    groceries_url =  f"{base_url}/shop/gb/groceries/new---trending/aldi-price-match"
+class MorrisonScraper:
+    """Optimized Morrisons scraper with accurate selectors"""
+    
+    base_url = "https://groceries.morrisons.com"
+    groceries_url = f"{base_url}/categories"
     timeout = 30  # Optimal timeout balance
-       
+
     def __init__(self, headless=True):
         self.logger = logging.getLogger(__name__)
         self.driver = self._init_firefox(headless)
@@ -53,80 +55,76 @@ class SainsburyScraper:
         try:
             self.driver.get(url)
             # Scroll to load lazy-loaded images
-            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight/3)")
+            time.sleep(1)
+            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight/2)")
+            time.sleep(1)
+            
             # Wait for critical elements to load
             WebDriverWait(self.driver, self.timeout).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "li.gridItem")))
+                EC.presence_of_element_located((By.CSS_SELECTOR, "div[data-test^='fop-wrapper']")))
             time.sleep(1)  # Small stabilization delay
             return BeautifulSoup(self.driver.page_source, "html.parser")
         except Exception as e:
             self.logger.warning(f"Page load failed: {str(e)}")
             raise
 
-    
-
-    def sainsbury_groceries(self) -> List[Dict[str, Any]]:
-        """Browse the Sainsbury groceries for featured products."""
+    def morrison_groceries(self) -> List[Dict[str, Any]]:
+        """Browse Morrisons groceries with updated selectors"""
         soup = self.fetch_page(self.groceries_url)
         if not soup:
             return []
-
+            
         products = []
-
-        # Sainsbury's product container
-        product_elements = soup.select("li.gridItem")
-
-        for product_element in product_elements[:20]:  # Limit to first 40
+        
+        # Updated selector for product elements
+        product_elements = soup.select("div[data-test^='fop-wrapper']")
+        
+        for product_element in product_elements[:20]:  # Limit to first 20
             try:
-                product_link = ProductExtractor.extract_product_link(
-                    product_element, 
-                    self.base_url, 
-                    "h3 a"  # Extract product URL
-                )
-
-                if product_link:
-                    # Extract product data
-                    product = {
-                        "store": "Sainsbury",
-                        "url": product_link,
-                        "name": ProductExtractor.extract_title(
-                            product_element, "h3 a"  
-                        ),
-                        "price": ProductExtractor.extract_price(
-                            product_element, "p.pricePerUnit"  
-                        ),
-                        "size": ProductExtractor.extract_size(
-                            product_element, "p.pricePerMeasure"  
-                        ),
-                        "unit_price": ProductExtractor.extract_discounted_price(
-                        product_element, "p.pricePerMeasure"  
-                        ),
-                        "image_url": ProductExtractor.extract_image_url(
-                            product_element, "h3 a img"  
-                        ),
-                        "rating": ProductExtractor.extract_rating(
-                            product_element, "div.reviews img", attr="alt"  
-                        ),
-                       
-                        "timestamp": datetime.now().isoformat()
-                    }
-                     # Add badges information if present
-                badges = []
-                badge_elements = product_element.select("div.badges img")
-                for badge in badge_elements:
-                    if badge.has_attr('alt'):
-                        badges.append(badge['alt'])
-                if badges:
-                    product["badges"] = ", ".join(badges)
-
-                    # Remove None values
-                    products.append({k: v for k, v in product.items() if v is not None})
-
+                product = {
+                    "store": "Morrisons",
+                    "url": ProductExtractor.extract_product_link(
+                        product_element, 
+                        self.base_url, 
+                        "a[data-test='fop-product-link']"
+                    ),
+                    "name": ProductExtractor.extract_title(
+                        product_element, "h3[data-test='fop-title']"
+                    ),
+                    "brand": "Morrisons",  # Most products are Morrisons brand
+                    "price": ProductExtractor.extract_price(
+                        product_element, "span[data-test='fop-price']"
+                    ),
+                    "discount_price": ProductExtractor.extract_discounted_price(
+                        product_element, "span[data-test='fop-offer-text']"
+                    ),
+                    "size": ProductExtractor.extract_size(
+                        product_element, "span.sc-1sjeki5-0"  # Size element
+                    ),
+                    "unit_price": ProductExtractor.extract_discounted_price(
+                        product_element, "span[data-test='fop-price-per-unit']"
+                    ),
+                    "image_url": ProductExtractor.extract_image_url(
+                        product_element, "img[data-test='lazy-load-image']"
+                    ),
+                    "rating": ProductExtractor._extract_morrisons_rating(
+                        product_element, "div[data-test='rating-badge']"
+                    ),
+                  
+                    "timestamp": datetime.now().isoformat()
+                }
+                
+                # Remove None values
+                products.append({k: v for k, v in product.items() if v is not None})
+                
             except Exception as e:
-                logger.error(f"Error extracting featured groceries: {e}")
-
+                logger.error(f"Error extracting Morrisons product: {e}")
+                
         return products
+
     
+
     def close(self):
         """Ensure proper resource cleanup"""
         if hasattr(self, 'driver'):

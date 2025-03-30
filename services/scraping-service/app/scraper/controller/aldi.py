@@ -1,97 +1,69 @@
-import os
-import requests
-from bs4 import BeautifulSoup
+
+
+import logging
 from typing import Dict, List, Any, Optional
 from datetime import datetime
-from ..base import BaseScraper
+from bs4 import BeautifulSoup
+from selenium import webdriver
+from selenium.webdriver.firefox.options import Options as FirefoxOptions
+from selenium.webdriver.firefox.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import WebDriverException
 from ..extractors import ProductExtractor
-from ..utils import logger
+import time
+from tenacity import retry, stop_after_attempt, wait_fixed
+from ...scraper.utils import logger
 
 class AldiScraper:
-    """Scraper for Aldi grocery products."""
+    """Optimized Aldi scraper with accurate selectors"""
     
-    def __init__(self):   
-        self.api_key = os.getenv("SCRAPER_API_KEY", "3d524fc75c4b6df70067d105b91be08c")
-        self.base_url = "https://groceries.aldi.co.uk"
-        self.groceries_url =  f"{self.base_url}/en-GB/fresh-food"
+    base_url = "https://groceries.aldi.co.uk"
+    groceries_url = f"{base_url}/en-GB/fresh-food"
+    timeout = 30  # Optimal timeout balance
 
-
-    def fetch_page(self, url: str) -> BeautifulSoup:
-        """Fetches the page using ScraperAPI and returns parsed HTML."""
+    def __init__(self, headless=True):
+        self.logger = logging.getLogger(__name__)
+        self.driver = self._init_firefox(headless)
+        
+    def _init_firefox(self, headless):
+        """Initialize Firefox with optimized settings"""
+        options = FirefoxOptions()
+        if headless:
+            options.add_argument("--headless")
+        
+        # Essential Firefox preferences
+        options.set_preference("dom.webdriver.enabled", False)
+        options.set_preference("useAutomationExtension", False)
+        options.set_preference("permissions.default.image", 2)  # Disable images
+        options.set_preference("general.useragent.override", 
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+        
+        service = Service(executable_path='/usr/local/bin/geckodriver')
         try:
-            params = {
-                "api_key": self.api_key,
-                "url": url,
-                "country_code": "uk",
-                "device_type": "desktop",
-                'output_format': 'json', 
-                'autoparse': 'true'
-            }
-            response = requests.get("https://api.scraperapi.com", params=params)
+            driver = webdriver.Firefox(service=service, options=options)
+            driver.set_page_load_timeout(self.timeout)
+            return driver
+        except WebDriverException as e:
+            self.logger.error(f"Firefox initialization failed: {str(e)}")
+            raise
 
-            if response.status_code == 200:
-                return BeautifulSoup(response.text, "html.parser")
-            else:
-                logger.error(f"ScraperAPI failed: {response.status_code} {response.text}")
-                return None
-
-        except Exception as e:
-            logger.error(f"Error fetching {url}: {e}")
-            return None
-    
-    
-    def scrape_product(self, url: str) -> Dict[str, Any]:
-        """Scrape product details from a Aldi product page."""
-        soup = self.fetch_page(url)
-        if not soup:
-            return {
-                "store": "Aldi",
-                "url": url,
-                "error": "Failed to fetch page",
-                "timestamp": datetime.now().isoformat()
-            }
-        
+    @retry(stop=stop_after_attempt(3), wait=wait_fixed(3))
+    def fetch_page(self, url):
+        """Reliable page fetching with proper waiting"""
         try:
-        
-            product = {
-                "store": "Aldi",
-                "url": url,
-                "timestamp": datetime.now().isoformat(),
-                "name": ProductExtractor.extract_title(
-                    soup, "h1"
-                ),
-                "price": ProductExtractor.extract_price(
-                    soup, 'p.text__StyledText-sc-1jpzi8m-0 gyHOWz ddsweb-text styled__PriceText-sc-v0qv7n-1 cXlRF'
-                ),
-                "image_url": ProductExtractor.extract_image_url(
-                    soup, 'img.styled__StyledImage-sc-1fweb41-1 hCXoFX'
-                ),
-                "shipping": ProductExtractor.extract_shipping_cost(
-                    soup, 'p.text__StyledText-sc-1jpzi8m-0 eWKcpa ddsweb-text'
-                ),
-                "rating": ProductExtractor.extract_rating(
-                    soup, 'div.styled__StyledNonInteractiveContainer-sc-1de15j6-7 klymXO ddsweb-rating__container'
-                ),
-                "manufacturer": ProductExtractor.extract_manufacturer(
-                    soup, 'p.text__StyledText-sc-1jpzi8m-0 eWKcpa ddsweb-text styled__StyledFootnote-sc-6tl8kn-3 cOHloe'
-                ),
-                "description": ProductExtractor.extract_description(
-                    soup, 'span.styled__Block-mfe-pdp__sc-1od89q4-1 bICtby'
-                ),
-                "currency": "GBP"
-            }
-            
-            return {k: v for k, v in product.items() if v is not None}
-            
+            self.driver.get(url)
+             # Scroll to load lazy-loaded images
+            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            # Wait for critical elements to load
+            WebDriverWait(self.driver, self.timeout).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "div.product-teaser-item")))
+            time.sleep(1)  # Small stabilization delay
+            return BeautifulSoup(self.driver.page_source, "html.parser")
         except Exception as e:
-            logger.error(f"Error scraping product {url}: {e}")
-            return {
-                "store": "Aldi",
-                "url": url,
-                "error": str(e),
-                "timestamp": datetime.now().isoformat()
-            }
-        
+            self.logger.warning(f"Page load failed: {str(e)}")
+            raise
 
     def aldi_groceries(self) -> List[Dict[str, Any]]:
         """Browse the Aldi groceries for featured products."""
@@ -100,16 +72,15 @@ class AldiScraper:
             return []
             
         products = []
-    
-        # Aldi's product container
-        product_elements = soup.select("div[data-qa='search-result']")
-
-        for product_element in product_elements[:40]:  # Limit to first 40
+        
+        product_elements = soup.select("div.product-teaser-item")
+        
+        for product_element in product_elements[:20]:  # Limit to first 20
             try:
                 product_link = ProductExtractor.extract_product_link(
                     product_element, 
                     self.base_url, 
-                    "a.p.text-default-font"  
+                    "a.product-tile__link"
                 )
                 
                 if product_link:
@@ -118,19 +89,20 @@ class AldiScraper:
                         "store": "Aldi",
                         "url": product_link,
                         "name": ProductExtractor.extract_title(
-                            product_element, "a.p.text-default-font"  
+                            product_element, "div.product-tile__name p"
+                        ),
+                        "brand": ProductExtractor.extract_manufacturer(
+                            product_element, "div.product-tile__brandname p"
                         ),
                         "price": ProductExtractor.extract_price(
-                            product_element, "div.product-tile-price span.h4 span"  
+                            product_element, "span.base-price__regular span"
                         ),
+                        
                         "size": ProductExtractor.extract_size(
-                            product_element, "div.text-center.p-3 div.text-gray-small"  
+                            product_element, "div.product-tile__unit-of-measurement p"
                         ),
                         "image_url": ProductExtractor.extract_image_url(
-                            product_element, "div.image-tile img.product-image" 
-                        ),
-                        "shipping": ProductExtractor.extract_shipping_cost(
-                            product_element, "div.drs-fee.text-center span"  
+                            product_element, "img.base-image"
                         ),
                         "timestamp": datetime.now().isoformat()
                     }
@@ -143,4 +115,18 @@ class AldiScraper:
                 
         return products
 
-    
+    def close(self):
+        """Ensure proper resource cleanup"""
+        if hasattr(self, 'driver'):
+            try:
+                self.driver.quit()
+            except Exception as e:
+                self.logger.error(f"Error closing driver: {str(e)}")
+
+    def __enter__(self):
+        """Support context manager protocol"""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Ensure resources are cleaned up"""
+        self.close()

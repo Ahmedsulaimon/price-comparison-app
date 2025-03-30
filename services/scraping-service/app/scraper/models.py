@@ -22,6 +22,9 @@ class ProductResponse(BaseModel):
     price: Optional[float] = None
     size:  Optional[str] = None
     image_url: Optional[str] = None
+    badges: Optional[str] = None
+    brand: Optional[str] = None
+    unit_price: Optional[str] = None
     currency: str = "GBP"
     shipping: Optional[str] = None
     rating: Optional[float] = None
@@ -30,12 +33,15 @@ class ProductResponse(BaseModel):
     timestamp: str = Field(default_factory=lambda: datetime.now().isoformat())
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "store": "Tesco",
                 "url": "https://www.tesco.com/groceries/en-GB/products/123456789",
                 "name": "Organic Bananas 5 Pack",
                 "discount": "1.20 clubcard",
+                "badges": "https://example.com/image.jpg",
+                "brand": "......",
+                "unit_price": 1.49,
                 "price": 1.49,
                 "size": "500g",
                 "image_url": "https://example.com/image.jpg",

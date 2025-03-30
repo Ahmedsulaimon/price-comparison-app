@@ -51,14 +51,20 @@ async def scrape_product(request: ProductRequest):
 # Iceland fresh groceries browse endpoint
 @router.get("/browse/iceland/freshgroceries", response_model=List[ProductResponse], tags=["Browsing"])
 async def browse_iceland_groceries():
-    """Browse Iceland groceries for featured products using ScraperAPI."""
+    """Browse Iceland groceries for featured products"""
+    scraper = IcelandScraper()
+
     try:
-        scraper = IcelandScraper()
+        
         products = scraper.iceland_groceries()
         if not products:
             raise HTTPException(status_code=404, detail="No products found.")
         return products
 
     except Exception as e:
+        if hasattr(scraper, 'close'):
+            scraper.close()
         logger.error(f"Error browsing Iceland fresh groceries: {e}")
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+    finally:
+        scraper.close()

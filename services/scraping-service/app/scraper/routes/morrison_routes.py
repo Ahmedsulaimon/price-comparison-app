@@ -7,7 +7,7 @@ from ...scraper.models import (
 )
 from ...scraper.factory import ScraperFactory
 from ...scraper.utils import logger
-from app.scraper.controller.aldi import AldiScraper
+from app.scraper.controller.morrison import MorrisonScraper
 
 
 router = APIRouter(tags=["Scraping"])
@@ -15,14 +15,14 @@ router = APIRouter(tags=["Scraping"])
 
 
 # Tesco fresh groceries browse endpoint
-@router.get("/browse/aldi/freshgroceries", response_model=List[ProductResponse], tags=["Browsing"])
-async def browse_aldi_groceries():
+@router.get("/browse/morrison/freshgroceries", response_model=List[ProductResponse], tags=["Browsing"])
+async def browse_morrrison_groceries():
     """Browse Aldi groceries for featured products using Selenium."""
     
-    scraper = AldiScraper()
+    scraper = MorrisonScraper()
     
     try:
-        products = scraper.aldi_groceries()
+        products = scraper.morrison_groceries()
         if not products:
             raise HTTPException(status_code=404, detail="No products found.")
         return products
@@ -30,7 +30,7 @@ async def browse_aldi_groceries():
     except Exception as e:
         if hasattr(scraper, 'close'):
             scraper.close()
-        logger.error(f"Error browsing Aldi fresh groceries: {e}")
+        logger.error(f"Error browsing morrison fresh groceries: {e}")
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
     finally:

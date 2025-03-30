@@ -52,15 +52,22 @@ async def scrape_product(request: ProductRequest):
 @router.get("/browse/sainsbury/freshgroceries", response_model=List[ProductResponse], tags=["Browsing"])
 async def browse_sainsbury_groceries():
     """Browse sainsbury groceries for featured products."""
+    scraper = SainsburyScraper()
     try:
-        scraper = SainsburyScraper
+        
         products = scraper.sainsbury_groceries()
         if not products:
             raise HTTPException(status_code=404, detail="No products found.")
         return products
+    
     except Exception as e:
+        if hasattr(scraper, 'close'):
+            scraper.close()
         logger.error(f"Error browsing sainsbury fresh groceries: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Unexpected error: {str(e)}"
-        )    
+        )
+    finally:
+        scraper.close()  # Ensure Selenium WebDriver is properly closed
+    
