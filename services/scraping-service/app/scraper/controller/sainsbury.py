@@ -76,7 +76,7 @@ class SainsburyScraper:
         # Sainsbury's product container
         product_elements = soup.select("li.gridItem")
 
-        for product_element in product_elements[:20]:  # Limit to first 40
+        for product_element in product_elements:  # Limit to first 40
             try:
                 product_link = ProductExtractor.extract_product_link(
                     product_element, 

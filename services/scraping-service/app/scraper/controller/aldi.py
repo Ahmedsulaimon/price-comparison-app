@@ -3,6 +3,7 @@
 import logging
 from typing import Dict, List, Any, Optional
 from datetime import datetime
+from urllib.parse import urljoin
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
@@ -11,6 +12,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import WebDriverException
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from ..extractors import ProductExtractor
 import time
 from tenacity import retry, stop_after_attempt, wait_fixed
@@ -65,55 +67,82 @@ class AldiScraper:
             self.logger.warning(f"Page load failed: {str(e)}")
             raise
 
-    def aldi_groceries(self) -> List[Dict[str, Any]]:
-        """Browse the Aldi groceries for featured products."""
-        soup = self.fetch_page(self.groceries_url)
-        if not soup:
-            return []
-            
-        products = []
-        
-        product_elements = soup.select("div.product-teaser-item")
-        
-        for product_element in product_elements[:20]:  # Limit to first 20
+    def get_next_page(self):
+        """Handle pagination for different page structures"""
+        try:
+            soup = BeautifulSoup(self.driver.page_source, "html.parser")
+
+            # Find the currently active page (e.g., <span> for page 4)
+            current_page = soup.select_one("span.base-pagination__count--active")
+            if not current_page:
+                return False  # No more pages
+
             try:
-                product_link = ProductExtractor.extract_product_link(
-                    product_element, 
-                    self.base_url, 
-                    "a.product-tile__link"
-                )
-                
-                if product_link:
-                    # Extract product data
-                    product = {
-                        "store": "Aldi",
-                        "url": product_link,
-                        "name": ProductExtractor.extract_title(
-                            product_element, "div.product-tile__name p"
-                        ),
-                        "brand": ProductExtractor.extract_manufacturer(
-                            product_element, "div.product-tile__brandname p"
-                        ),
-                        "price": ProductExtractor.extract_price(
-                            product_element, "span.base-price__regular span"
-                        ),
-                        
-                        "size": ProductExtractor.extract_size(
-                            product_element, "div.product-tile__unit-of-measurement p"
-                        ),
-                        "image_url": ProductExtractor.extract_image_url(
-                            product_element, "img.base-image"
-                        ),
-                        "timestamp": datetime.now().isoformat()
-                    }
-                    
-                    # Remove None values
-                    products.append({k: v for k, v in product.items() if v is not None})
-                    
-            except Exception as e:
-                logger.error(f"Error extracting featured groceries: {e}")
-                
-        return products
+                current_page_number = int(current_page["data-test"].replace("current-page", ""))
+            except (KeyError, ValueError):
+                return False  # If parsing fails, assume no more pages
+
+            next_page_number = current_page_number + 1
+
+            # Check if next page exists as an <a> tag
+            next_page = soup.select_one(f'a[data-test="page-{next_page_number}"]')
+
+            if next_page:
+                next_page_url = urljoin(self.base_url, next_page["href"])
+                self.driver.get(next_page_url)
+                time.sleep(2)
+                return True
+            
+            return False  # Stop if no next page link found
+
+        except Exception as e:
+            self.logger.error(f"Pagination error: {e}")
+            return False
+
+    def aldi_groceries(self) -> List[Dict[str, Any]]:
+        """Scrape all Aldi groceries across multiple pages"""
+        self.driver.get(self.groceries_url)
+        all_products = []
+
+        while True:
+            soup = BeautifulSoup(self.driver.page_source, "html.parser")
+            product_elements = soup.select("div.product-teaser-item")
+
+            for product_element in product_elements:
+                try:
+                    product_link = ProductExtractor.extract_product_link(
+                        product_element, self.base_url, "a.product-tile__link"
+                    )
+                    if product_link:
+                        product = {
+                            "store": "Aldi",
+                            "url": product_link,
+                            "name": ProductExtractor.extract_title(
+                                product_element, "div.product-tile__name p"
+                            ),
+                            "brand": ProductExtractor.extract_manufacturer(
+                                product_element, "div.product-tile__brandname p"
+                            ),
+                            "price": ProductExtractor.extract_price(
+                                product_element, "span.base-price__regular span"
+                            ),
+                            "size": ProductExtractor.extract_size(
+                                product_element, "div.product-tile__unit-of-measurement p"
+                            ),
+                            "image_url": ProductExtractor.extract_image_url(
+                                product_element, "img.base-image"
+                            ),
+                            "timestamp": datetime.now().isoformat()
+                        }
+                        all_products.append({k: v for k, v in product.items() if v is not None})
+
+                except Exception as e:
+                    logger.error(f"Error extracting product: {e}")
+
+            if not self.get_next_page():
+                break  # Stop if no next page
+
+        return all_products
 
     def close(self):
         """Ensure proper resource cleanup"""

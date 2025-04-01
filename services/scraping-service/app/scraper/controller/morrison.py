@@ -80,7 +80,7 @@ class MorrisonScraper:
         # Updated selector for product elements
         product_elements = soup.select("div[data-test^='fop-wrapper']")
         
-        for product_element in product_elements[:20]:  # Limit to first 20
+        for product_element in product_elements:  # Limit to first 20
             try:
                 product = {
                     "store": "Morrisons",

@@ -70,7 +70,7 @@ class IcelandScraper:
         products = []
         product_elements = soup.select("div[data-test-selector='product-list-item']")
 
-        for product_element in product_elements[:10]:  # Limit to first 10 products
+        for product_element in product_elements:  # Limit to first 10 products
             try:
                 product_link = ProductExtractor.extract_product_link(
                     product_element, 
