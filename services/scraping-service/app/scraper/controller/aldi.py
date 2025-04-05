@@ -132,6 +132,8 @@ class AldiScraper:
                             "image_url": ProductExtractor.extract_image_url(
                                 product_element, "img.base-image"
                             ),
+                            "provide_rating": False,
+                            "external_id": ProductExtractor.extract_external_id(product_link),
                             "timestamp": datetime.now().isoformat()
                         }
                         all_products.append({k: v for k, v in product.items() if v is not None})

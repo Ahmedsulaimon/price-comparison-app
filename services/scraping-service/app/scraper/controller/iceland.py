@@ -105,6 +105,8 @@ class IcelandScraper:
                             product_element,
                            "p._105qcvc4mg"
                         ),
+                         "provide_rating": True,
+                          "external_id": ProductExtractor.extract_external_id(product_link),
                         "size": ProductExtractor.extract_iceland_size(
                             product_element,  "a[data-test-selector='product-list-item-name']"
                         ),

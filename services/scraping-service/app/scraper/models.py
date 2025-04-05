@@ -29,6 +29,8 @@ class ProductResponse(BaseModel):
     shipping: Optional[str] = None
     rating: Optional[float] = None
     manufacturer: Optional[str] = None
+    provide_rating: Optional[bool] = None
+    external_id: Optional[str] = None
     description: Optional[str] = None
     timestamp: str = Field(default_factory=lambda: datetime.now().isoformat())
     
@@ -48,6 +50,8 @@ class ProductResponse(BaseModel):
                 "currency": "GBP",
                 "shipping": "Free delivery",
                 "rating": 4.5,
+                "provide_rating": True,
+                "external_id": "34566543",
                 "manufacturer": "Tesco",
                 "description": "Organic bananas, perfect for a healthy snack.",
                 "timestamp": "2023-09-08T12:34:56.789Z"

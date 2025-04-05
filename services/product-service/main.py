@@ -1,59 +1,42 @@
-
 import os
-from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import exc
 from time import sleep
+from sqlalchemy import exc
+from app import create_app
+from app.extensions import db
+from app.config import Config
+from app.service import PriceService
 
-import sys
-sys.path.insert(0, os.getcwd()+"/app")
-import config
-import routes
-# Create database instance
-db = SQLAlchemy()
 
-def create_app():
-    """Application factory function"""
-    app = Flask(__name__)
-    
-    # Load configuration from config.py
-   
-    app.config.from_object(config.Config)
-    
-    # Initialize database with app
-    db.init_app(app)
-    
-    # Initialize CORS 
-    from flask_cors import CORS
-    CORS(app)
-    
-    # Database connection retry logic
-    retries = 5
-    while retries > 0:
-        try:
-            with app.app_context():
+def initialize_database(app):
+    """Handle database initialization with retries"""
+    with app.app_context():
+        retries = 5
+        while retries > 0:
+            try:
                 db.create_all()
-                break
-        except exc.OperationalError:
-            retries -= 1
-            sleep(5)
-            if retries == 0:
-                raise RuntimeError("Failed to connect to database after 5 attempts")
-            
-    # Import routes after app creation to avoid circular imports
-    
-    app.register_blueprint(routes.product_bp)
-
-    return app
-
-# Create Flask application instance
-app = create_app()
+                # from app.database.db_setup import initialize_retailers
+                # initialize_retailers(db)
+                print("Database initialized successfully")
+                return True
+            except exc.OperationalError:
+                retries -= 1
+                sleep(5)
+                if retries == 0:
+                    app.logger.error("Database connection failed after 5 attempts")
+                    raise
 
 if __name__ == '__main__':
-    # Start the development server
+    app = create_app(Config)
+    
+    # Initialize database
+    initialize_database(app)
+    
+    # Start services
+    price_service = PriceService(db)
+    price_service.start_scheduler(app)
+    
     app.run(
-        host=app.config.get('HOST', '0.0.0.0'),
-        port=app.config.get('PORT', 5000),
-        debug=app.config.get('DEBUG', False)
+        host=os.getenv('HOST', '0.0.0.0'),
+        port=int(os.getenv('PORT', 5000)),
+        debug=os.getenv('DEBUG', False)
     )
-

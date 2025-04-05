@@ -210,3 +210,20 @@ class ProductExtractor:
                 return base_url + href
             return href
         return None
+    
+    @staticmethod
+    def extract_external_id(url):
+        """Extracts product ID from various retailer URLs."""
+        patterns = {
+            'morrisons': r'/products/.*/(\d+)',  # Match last numeric ID
+            'sainsbury': r'/gol/(\d+)',  # Match numeric ID
+            'iceland': r'/p/.*/(\d+)\.html',  # Ensure ID is before .html
+            'aldi': r'/(\d+)$'  # Match the last numeric sequence
+        }
+        
+        for retailer, pattern in patterns.items():
+            match = re.search(pattern, url)
+            if match:
+                return match.group(1)
+        return None
+

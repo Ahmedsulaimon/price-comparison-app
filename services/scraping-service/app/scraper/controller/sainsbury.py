@@ -83,8 +83,14 @@ class SainsburyScraper:
                     self.base_url, 
                     "h3 a"  # Extract product URL
                 )
-
+                
                 if product_link:
+                    
+                    image_url =  ProductExtractor.extract_image_url(
+                            product_element, "h3 a img"  
+                        )
+
+
                     # Extract product data
                     product = {
                         "store": "Sainsbury",
@@ -101,13 +107,12 @@ class SainsburyScraper:
                         "unit_price": ProductExtractor.extract_discounted_price(
                         product_element, "p.pricePerMeasure"  
                         ),
-                        "image_url": ProductExtractor.extract_image_url(
-                            product_element, "h3 a img"  
-                        ),
+                        "image_url": image_url,
                         "rating": ProductExtractor.extract_rating(
                             product_element, "div.reviews img", attr="alt"  
                         ),
-                       
+                         "provide_rating": True,
+                         "external_id": ProductExtractor.extract_external_id(image_url),
                         "timestamp": datetime.now().isoformat()
                     }
                      # Add badges information if present
