@@ -4,7 +4,7 @@ from sqlalchemy import exc
 from app import create_app
 from app.extensions import db
 from app.config import Config
-from app.service import PriceService
+from app.services.data_processing import PriceService
 
 
 def initialize_database(app):

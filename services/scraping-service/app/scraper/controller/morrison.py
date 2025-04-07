@@ -9,23 +9,22 @@ from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import WebDriverException, TimeoutException, StaleElementReferenceException
+from selenium.common.exceptions import WebDriverException
 from ..extractors import ProductExtractor
 import time
 from tenacity import retry, stop_after_attempt, wait_fixed
 from ...scraper.utils import logger
 
 class MorrisonScraper:
-    """Optimized Morrisons scraper with accurate selectors and infinite scrolling"""
+    """Optimized Morrisons scraper with accurate selectors"""
     
     base_url = "https://groceries.morrisons.com"
     groceries_url = f"{base_url}/categories"
     timeout = 30  # Optimal timeout balance
 
-    def __init__(self, headless=True, max_products=100):
+    def __init__(self, headless=True):
         self.logger = logging.getLogger(__name__)
         self.driver = self._init_firefox(headless)
-        self.max_products = max_products
         
     def _init_firefox(self, headless):
         """Initialize Firefox with optimized settings"""
@@ -54,6 +53,12 @@ class MorrisonScraper:
         """Reliable page fetching with proper waiting"""
         try:
             self.driver.get(url)
+            # Scroll to load lazy-loaded images
+            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight/3)")
+            time.sleep(1)
+            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight/2)")
+            time.sleep(1)
+            
             # Wait for critical elements to load
             WebDriverWait(self.driver, self.timeout).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, "div[data-test^='fop-wrapper']")))
@@ -62,70 +67,25 @@ class MorrisonScraper:
         except Exception as e:
             self.logger.warning(f"Page load failed: {str(e)}")
             raise
-            
-    def _scroll_for_more_products(self, target_count=100):
-        """Implement infinite scrolling to load more products"""
-        products_found = 0
-        last_count = 0
-        max_attempts = 10
-        attempts = 0
-        
-        while products_found < target_count and attempts < max_attempts:
-            # Get current product count
-            products = self.driver.find_elements(By.CSS_SELECTOR, "div[data-test^='fop-wrapper']")
-            products_found = len(products)
-            
-            self.logger.info(f"Found {products_found} products so far")
-            
-            # If no new products loaded after scrolling, break the loop
-            if products_found == last_count:
-                attempts += 1
-            else:
-                attempts = 0  # Reset attempts if new products were loaded
-                
-            last_count = products_found
-            
-            # Scroll down to trigger lazy loading
-            try:
-                # Scroll to the last product found
-                if products:
-                    last_product = products[-1]
-                    self.driver.execute_script("arguments[0].scrollIntoView({block: 'end', behavior: 'smooth'});", last_product)
-                    
-                # Also scroll a bit more to ensure triggering the load
-                self.driver.execute_script("window.scrollBy(0, 500);")
-                
-                # Wait for potential new elements to load
-                time.sleep(2)
-            except StaleElementReferenceException:
-                # If elements become stale during scrolling, refresh the page source
-                self.logger.warning("Elements became stale, refreshing references")
-                time.sleep(1)
-        
-        self.logger.info(f"Finished loading with {products_found} products")
-        return BeautifulSoup(self.driver.page_source, "html.parser")
 
     def morrison_groceries(self) -> List[Dict[str, Any]]:
-        """Browse Morrisons groceries with updated selectors and infinite scrolling"""
+        """Browse Morrisons groceries with updated selectors"""
         soup = self.fetch_page(self.groceries_url)
         if not soup:
             return []
             
-        # Implement infinite scrolling to load more products
-        soup = self._scroll_for_more_products(self.max_products)
-        
         products = []
         
         # Updated selector for product elements
         product_elements = soup.select("div[data-test^='fop-wrapper']")
         
-        for product_element in product_elements[:self.max_products]:  # Limit to specified max products
+        for product_element in product_elements:  # Limit to first 20
             try:
                 product_link = ProductExtractor.extract_product_link(
-                    product_element, 
-                    self.base_url, 
-                    "a[data-test='fop-product-link']"
-                )
+                product_element, 
+                self.base_url, 
+               "a[data-test='fop-product-link']"
+            )
                 product = {
                     "store": "Morrisons",
                     "url": product_link,
@@ -151,8 +111,9 @@ class MorrisonScraper:
                     "rating": self._extract_morrisons_rating(
                         product_element, "div[data-test='rating-badge']"
                     ),
-                    "external_id": ProductExtractor.extract_external_id(product_link),
-                    "provide_rating": True,
+                     "external_id": ProductExtractor.extract_external_id(product_link),
+                     "provide_rating": False,
+                  
                     "timestamp": datetime.now().isoformat()
                 }
                 
@@ -160,10 +121,10 @@ class MorrisonScraper:
                 products.append({k: v for k, v in product.items() if v is not None})
                 
             except Exception as e:
-                self.logger.error(f"Error extracting Morrisons product: {e}")
+                logger.error(f"Error extracting Morrisons product: {e}")
                 
         return products
-
+    
     def _extract_morrisons_rating(self, soup_element, selector):
         """Extract Morrisons-specific rating using the provided HTML structure"""
         try:
@@ -206,6 +167,7 @@ class MorrisonScraper:
             self.logger.warning(f"Error extracting rating: {e}")
         
         return None
+    
 
     def close(self):
         """Ensure proper resource cleanup"""

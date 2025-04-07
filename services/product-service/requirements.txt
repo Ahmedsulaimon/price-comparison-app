@@ -11,3 +11,5 @@ requests==2.32.3
 sqlalchemy==2.0.40
 urllib3==2.3.0
 http-adapter==1.0.0
+pandas==2.2.3
+numpy==2.2.4
