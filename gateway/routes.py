@@ -7,15 +7,10 @@ app = Flask(__name__)
 def health_check():
     return jsonify({"status": "healthy"})
 
-@app.route("/api/products/grouped", methods=["GET"])
-def proxy_grouped_products():
-    category = request.args.get("category")
-    min_rating = request.args.get("min_rating")
+@app.route("/grouped-products", methods=["GET"])
+def grouped_products_proxy():
     try:
-        response = requests.get(
-            "http://product-service:5001/api/products/grouped",
-            params={"category": category, "min_rating": min_rating}
-        )
-        return jsonify(response.json()), response.status_code
+        response = requests.get("http://product-service:5000/api/products/grouped")
+        return jsonify(response.json())
     except requests.exceptions.RequestException as e:
-        return jsonify({"error": f"Gateway error: {str(e)}"}), 502
+        return jsonify({"error": f"Service communication error: {str(e)}"}), 502
