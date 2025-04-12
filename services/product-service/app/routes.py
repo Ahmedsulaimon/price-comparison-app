@@ -1,7 +1,8 @@
 
+import re
 from flask import Blueprint, current_app, jsonify, request
 import requests
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
 from app.extensions import db
@@ -9,6 +10,9 @@ from app.services.price_generator import PriceGenerator
 
 from app.models import PriceHistory, Product, Retailer
 from app.services.data_processing import PriceService
+
+from app.ml_training.recommendation_engine import RecommendationEngine
+
 
 product_bp = Blueprint('product', __name__)
 
@@ -86,6 +90,27 @@ def sync_products():
     }), 200
 
 
+@product_bp.route('/api/generate-price-history', methods=['POST'])
+def generate_price_history():
+    try:
+        # Get limit from either JSON body or query parameters
+        limit = request.json.get('limit', 100) if request.is_json else request.args.get('limit', 100, type=int)
+        
+        # Validate limit
+        if not 1 <= limit <= 1000:
+            return jsonify({'error': 'Limit must be between 1 and 1000'}), 400
+            
+        PriceGenerator.generate_for_all_products(limit)
+        return jsonify({
+            'message': f'Price history generation started for {limit} products',
+            'limit': limit
+        }), 202
+        
+    except Exception as e:
+        current_app.logger.error(f"Price generation error: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Failed to start generation'}), 500
+    
+
 @product_bp.route('/api/products/compare', methods=['GET'])
 def compare_products():
     product_name = request.args.get('name')
@@ -95,14 +120,25 @@ def compare_products():
         return jsonify({'error': 'Missing required parameter: name'}), 400
     
     try:
+            
+        escaped_product_name = re.escape(product_name)
+        regex_pattern = rf'\y{escaped_product_name}\y'  # Whole-word match
+        
         with current_app.app_context():
-            # Base query
+
             query = db.session.query(Product).filter(
-                func.lower(Product.name).contains(func.lower(product_name)))
+                Product.name.op('~*')(regex_pattern)  # Case-insensitive regex match
+            )
+        # with current_app.app_context():
+        #     # Base query
+        #     query = db.session.query(Product).filter(
+        #         func.lower(Product.name).contains(func.lower(product_name)))
             
             if retailer:
                 query = query.join(Retailer).filter(
                     func.lower(Retailer.name) == func.lower(retailer))
+            
+            query = query.order_by(Product.current_price.asc())
             
             products = query.all()
             
@@ -120,7 +156,6 @@ def compare_products():
                 history = db.session.query(PriceHistory)\
                 .filter_by(product_id=p.product_id)\
                 .order_by(PriceHistory.valid_from.desc())\
-                .limit(30)\
                 .all()
                 
                 result.append({
@@ -148,24 +183,136 @@ def compare_products():
         return jsonify({'error': 'Internal server error'}), 500
     
 
-@product_bp.route('/api/generate-price-history', methods=['POST'])
-def generate_price_history():
+
+
+@product_bp.route('/api/recommendations', methods=['GET'])
+def get_recommendations():
+    product_name = request.args.get('name')
+    if not product_name:
+        return jsonify({'error': 'Missing product name'}), 400
+
     try:
-        # Get limit from either JSON body or query parameters
-        limit = request.json.get('limit', 100) if request.is_json else request.args.get('limit', 100, type=int)
-        
-        # Validate limit
-        if not 1 <= limit <= 1000:
-            return jsonify({'error': 'Limit must be between 1 and 1000'}), 400
-            
-        PriceGenerator.generate_for_all_products(limit)
-        return jsonify({
-            'message': f'Price history generation started for {limit} products',
-            'limit': limit
-        }), 202
-        
+        engine = RecommendationEngine()
+        results = engine.generate_recommendations(product_name)
+        return jsonify(results)
     except Exception as e:
-        current_app.logger.error(f"Price generation error: {str(e)}", exc_info=True)
-        return jsonify({'error': 'Failed to start generation'}), 500
+        current_app.logger.error(f"Recommendation error: {str(e)}")
+        return jsonify({'error': 'Recommendation failed'}), 500
     
- 
+group_keywords = [
+    {'keyword': 'onion', 'exclude': ['spring']},
+    {'keyword': 'banana', 'exclude': ['muller corner']},
+    {'keyword': 'oranges'},
+    {'keyword': 'skimmed milk', 'exclude': ['semi-skimmed', 'whole']},
+    {'keyword': 'semi-skimmed milk', 'exclude': ['skimmed', 'whole']},
+    {'keyword': 'whole milk', 'exclude': ['skimmed', 'semi-skimmed']},
+    {'keyword': 'white potatoes', 'exclude': ['baked']},
+    {'keyword': 'baked potatoes', 'exclude': ['white']},
+    {'keyword': 'butter'},
+    {'keyword': 'carrot'},
+    {'keyword': 'cucumber'},
+    {'keyword': 'pepper'},
+    {'keyword': 'potatoes'},
+    {'keyword': 'Bread'},
+    {'keyword': 'chicken breast'},
+    {'keyword': 'Granulated Sugar'},
+    {'keyword': 'rice'},
+    {'keyword': 'avocado'},
+    {'keyword': 'Baked Beans'},
+    {'keyword': 'Muller Corner'}
+]
+
+
+
+def serialize_product(p):
+    latest_price = db.session.query(PriceHistory.unit_price) \
+        .filter_by(product_id=p.product_id) \
+        .order_by(PriceHistory.scraped_at.desc()).first()
+
+    return {
+        'id': str(p.product_id),
+        'name': p.name,
+        'retailer': p.retailer.name,
+        'price': float(p.current_price),
+        'rating': float(p.rating) if p.rating else None,
+        'unit_price': float(latest_price[0]) if latest_price and latest_price[0] else None,
+        'base_unit': p.base_unit,
+        'image_url': p.image_url,
+        'url': p.product_url,
+        'badge': p.badges
+    }
+
+@product_bp.route("/api/products/grouped", methods=["GET"])
+def grouped_products():
+    try:
+        result = []
+        
+        for group in group_keywords:
+            keyword = group['keyword']
+            excludes = group.get('exclude', [])
+            
+            # Start with basic case-insensitive contains
+            query = db.session.query(Product)\
+                     .filter(Product.name.ilike(f"%{keyword}%"))
+            
+            # Apply exclusions
+            for exclusion in excludes:
+                query = query.filter(~Product.name.ilike(f"%{exclusion}%"))
+            
+            # Get products sorted by price
+            products = query.order_by(Product.current_price.asc()).all()
+            
+            if products:
+                result.append({
+                    'keyword': keyword,
+                    'recommended': serialize_product(products[0]),
+                    'others': [serialize_product(p) for p in products[1:]]
+                })
+        
+        return jsonify(result if result else {"message": "No matching products found"})
+
+    except Exception as e:
+        current_app.logger.error(f"Grouped products error: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Internal server error'}), 500
+
+#     @product_bp.route("/api/products/grouped", methods=["GET"])
+# def grouped_products():
+#     try:
+#         result = []
+        
+#         for keyword in group_keywords:
+#             # Flexible search: either regex or LIKE pattern
+#             search_pattern = f"%{keyword}%"
+#             products = db.session.query(Product)\
+#                        .filter(
+#                            or_(
+#                                Product.name.ilike(search_pattern),
+#                                Product.name.op('~')(rf"\y{re.escape(keyword)}\y")
+#                            )
+#                        )\
+#                        .all()
+
+#             if not products:
+#                 current_app.logger.warning(f"No products found for keyword: {keyword}")
+#                 continue
+
+#             # Sort by price (handle None values)
+#             sorted_products = sorted(
+#                 [p for p in products if p.current_price is not None],
+#                 key=lambda x: x.current_price
+#             )
+            
+#             if not sorted_products:
+#                 continue
+
+#             result.append({
+#                 'keyword': keyword,
+#                 'recommended': serialize_product(sorted_products[0]),
+#                 'others': [serialize_product(p) for p in sorted_products[1:4]]  # Top 3 others
+#             })
+
+#         return jsonify(result if result else {"message": "No matching products found"})
+
+#     except Exception as e:
+#         current_app.logger.error(f"Grouped products error: {str(e)}", exc_info=True)
+#         return jsonify({'error': 'Internal server error'}), 500

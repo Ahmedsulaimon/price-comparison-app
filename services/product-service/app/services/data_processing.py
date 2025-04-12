@@ -11,6 +11,21 @@ class PriceService:
     def __init__(self, db):
         self.db = db
         self.scheduler = BackgroundScheduler()
+        # In product service
+        self.category_keywords = {
+                    'onion': ['onion'], 'banana': ['banana'], 'oranges': ['oranges'],
+                    'milk': ['skimmed milk', 'semi-skimmed milk', 'whole milk'],
+                    'butter': ['butter'], 'carrot': ['carrot'], 'cucumber': ['cucumber'],
+                    'pepper': ['pepper'], 'potatoes': ['potatoes'], 'Bread': ['Bread'],
+                    'chicken breast': ['chicken breast'], 'Granulated Sugar': ['Granulated Sugar'],
+                    'rice': ['rice'], 'avocado': ['avocado'], 'Baked Beans': ['Baked Beans'],
+                    'Muller Corner': ['Muller Corner']
+            }
+    
+    @staticmethod
+    def normalize_name(name):
+        return name.lower().strip()
+    
 
     @staticmethod
     def normalize_size(size_str):
@@ -34,7 +49,7 @@ class PriceService:
     @staticmethod
     def normalize_unit_price(unit_str):
         if not unit_str:
-            return None, None
+            return None
 
         try:
             clean_str = ' '.join(str(unit_str).strip().lower().split())
@@ -59,17 +74,18 @@ class PriceService:
                 match = re.search(pattern, clean_str)
                 if match:
                     price = float(match.group(1))
-                    unit = match.group(2).lower()
+                    #unit = match.group(2).lower()
 
                     if is_pence:
                         price = price / 100
-                    return price, unit
+                    return price
+              
 
         except (ValueError, AttributeError, TypeError) as e:
             # Use logging if this isn't inside Flask
              current_app.logger.error(f"Failed to parse unit price '{unit_str}': {str(e)}")
 
-        return None, None
+        return None
 
     @staticmethod
     def process_scraped_product(data, retailer_name):  
@@ -92,7 +108,7 @@ class PriceService:
         ).first()
 
         size_info = PriceService.normalize_size(data.get('size'))
-        unit_price, _ = PriceService.normalize_unit_price(data.get('unit_price'))
+        unit_price = PriceService.normalize_unit_price(data.get('unit_price'))
 
         if not product:
             product = Product(
@@ -131,7 +147,7 @@ class PriceService:
         from datetime import datetime, timedelta
         
         if unit_price is None:
-            unit_price, _ = PriceService.normalize_unit_price(data.get('unit_price'))
+            unit_price = PriceService.normalize_unit_price(data.get('unit_price'))
         
         history = PriceHistory(
             product_id=product_id,

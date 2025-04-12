@@ -7,17 +7,15 @@ app = Flask(__name__)
 def health_check():
     return jsonify({"status": "healthy"})
 
-@app.route("/process-image", methods=["POST"])
-def process_image():
-    if not request.json or 'image' not in request.json:
-        return jsonify({"error": "No image data provided"}), 400
-    
-    # Forward the request to the image recognition service
+@app.route("/api/products/grouped", methods=["GET"])
+def proxy_grouped_products():
+    category = request.args.get("category")
+    min_rating = request.args.get("min_rating")
     try:
-        response = requests.post(
-            "http://image-recognition-service:5002/recognize",
-            json=request.json
+        response = requests.get(
+            "http://product-service:5001/api/products/grouped",
+            params={"category": category, "min_rating": min_rating}
         )
-        return jsonify(response.json())
+        return jsonify(response.json()), response.status_code
     except requests.exceptions.RequestException as e:
-        return jsonify({"error": f"Service communication error: {str(e)}"}), 502
+        return jsonify({"error": f"Gateway error: {str(e)}"}), 502

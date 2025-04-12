@@ -1,21 +1,25 @@
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
+from typing import Optional
+from bs4 import BeautifulSoup
 
-options = Options()
-options.add_argument("--headless")
-options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36")
 
-driver = webdriver.Chrome(options=options)
-driver.get( "https://groceries.morrisons.com/categories")
+@staticmethod
+def extract_price(soup: BeautifulSoup, selector: str = 'span.price') -> Optional[float]:
+    """Extract product price using the provided selector. Converts pence to pounds when needed."""
+    price_tag = soup.select_one(selector)
+    if price_tag:
+        price_text = price_tag.text.strip().lower()
+        # Check if it's in pence (e.g., '52p')
+        is_pence = 'p' in price_text
 
-print(driver.page_source)
-driver.quit()
+        # Remove non-numeric characters except '.' (e.g., £, p, whitespace)
+        price_clean = ''.join(filter(lambda x: x.isdigit() or x == '.', price_text))
 
-# from selenium import webdriver
-# from selenium.webdriver.chrome.service import Service
+        try:
+            price = float(price_clean)
+            # Convert pence to pounds
+            return round(price / 100, 2) if is_pence else round(price, 2)
+        except ValueError:
+            return None
+    return None
 
-# service = Service("C:\\chromedriver\\chromedriver.exe")
-# driver = webdriver.Chrome(service=service)
-# driver.get("https://www.google.com")
-# print(driver.title)  # Should print "Google"
-# driver.quit()
+

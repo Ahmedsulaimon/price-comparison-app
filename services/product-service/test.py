@@ -1,48 +1,112 @@
-import re
+# # import re
 
-@staticmethod
-def normalize_unit_price(unit_str):
-    if not unit_str:
-        return None, None
-
-    try:
-        clean_str = ' '.join(str(unit_str).strip().lower().split())
-
-        # Each tuple contains (regex pattern, is_pence)
-        patterns = [
-            (r'£([\d.]+)\s*per\s*([\w/]+)', False),  # £1.45 per 1L
-            (r'([\d.]+)p\s*per\s*([\w/]+)', True),   # 20p per 100ml
-            (r'£([\d.]+)\s*/\s*([\w/]+)', False),    # £0.20/100ml
-            (r'([\d.]+)\s*p\s*/\s*([\w/]+)', True),  # 20 p / 100ml
-            (r'([\d.]+)\s*per\s*([\w/]+)', False),   # 1.45 per litre (assume pounds unless marked p)
-        ]
-
-        for pattern, is_pence in patterns:
-            match = re.search(pattern, clean_str)
-            if match:
-                price = float(match.group(1))
-                unit = match.group(2).lower()
-
-                if is_pence:
-                    price = price / 100
-                return price, unit
-
-    except (ValueError, AttributeError, TypeError) as e:
-        # Use logging if this isn't inside Flask
-        print(f"Failed to parse unit price '{unit_str}': {str(e)}")
-
-    return None, None
 
     
 
-test_cases = [
-    "£1.45 per 1L",
-    "20p per 100ml",
-    "£0.20/100ml",
-    "20 p / 100ml",
-    "1.45 per litre"  # Might need additional pattern
-]
 
-for case in test_cases:
-    price, unit = normalize_unit_price(case)
-    print(f"'{case}' -> {price}, {unit}")   
+
+# import numpy as np
+# import pandas as pd
+# from datetime import datetime, timedelta
+# from faker import Faker
+# import psycopg2
+# import random
+# import math
+
+# # Configuration
+# DB_CONFIG = {
+#     'dbname': 'your_dbname',
+#     'user': 'your_user',
+#     'password': 'your_password',
+#     'host': 'localhost'
+# }
+
+# NUM_PRODUCTS = 100  # Number of products to generate history for
+# START_DATE = datetime(2023, 1, 1)
+# END_DATE = datetime(2024, 1, 1)
+# FLUCTUATION_RANGE = 0.2  # ±20% price fluctuation
+
+# def generate_price_pattern(base_price, start_date, end_date):
+#     """Generate realistic price fluctuations with seasonal patterns"""
+#     dates = pd.date_range(start_date, end_date, freq='D')
+#     days = (end_date - start_date).days
+#     x = np.linspace(0, 4 * math.pi, days)
+    
+#     # Base components
+#     seasonal = np.sin(x) * 0.1  # Seasonal variation
+#     trend = np.linspace(0, 0.05, days)  # Gradual price increase
+#     noise = np.random.normal(0, 0.02, days)  # Random noise
+    
+#     # Special events (sales)
+#     sale_days = random.sample(range(days), 5)
+#     sale_effect = np.zeros(days)
+#     for day in sale_days:
+#         sale_duration = random.randint(3, 7)
+#         sale_effect[day:day+sale_duration] = -0.15  # 15% discount
+    
+#     combined = base_price * (1 + seasonal + trend + noise + sale_effect)
+#     return pd.Series(combined, index=dates)
+
+# def generate_unit_price(price, size_description):
+#     """Generate realistic unit prices based on product size"""
+#     if not size_description:
+#         return None
+    
+#     # Extract numeric quantity from size description
+#     try:
+#         quantity = float(''.join(filter(str.isdigit, size_description.split()[0])))
+#         return round(price / quantity, 2)
+#     except:
+#         return None
+
+# def insert_price_history(product_id, prices):
+#     """Insert generated prices into database"""
+#     conn = psycopg2.connect(**DB_CONFIG)
+#     cur = conn.cursor()
+    
+#     try:
+#         for date, price in prices.items():
+#             cur.execute("""
+#                 INSERT INTO price_history 
+#                 (product_id, price, valid_from, scraped_at)
+#                 VALUES (%s, %s, %s, %s)
+#                 """, (
+#                     product_id,
+#                     round(float(price), 2),
+#                     date,
+#                     date + timedelta(hours=12)  # Simulate daily scrape time
+#                 ))
+#         conn.commit()
+#     finally:
+#         cur.close()
+#         conn.close()
+
+# def main():
+#     fake = Faker()
+    
+#     # Get products from database
+#     conn = psycopg2.connect(**DB_CONFIG)
+#     products = pd.read_sql("""
+#         SELECT product_id, current_price, size_description 
+#         FROM products 
+#         LIMIT %s
+#         """, conn, params=(NUM_PRODUCTS,))
+#     conn.close()
+
+#     # Generate price history for each product
+#     for _, product in products.iterrows():
+#         print(f"Generating history for {product['product_id']}")
+#         prices = generate_price_pattern(
+#             product['current_price'], 
+#             START_DATE, 
+#             END_DATE
+#         )
+        
+#         # Add unit price calculations
+#         prices = prices.apply(
+#             lambda p: (p, generate_unit_price(p, product['size_description'])))
+        
+#         insert_price_history(product['product_id'], prices)
+
+# if __name__ == "__main__":
+#     main()
