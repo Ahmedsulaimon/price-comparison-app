@@ -198,13 +198,92 @@ def get_recommendations():
     except Exception as e:
         current_app.logger.error(f"Recommendation error: {str(e)}")
         return jsonify({'error': 'Recommendation failed'}), 500
+
+
+
+@product_bp.route('/api/predictions/all', methods=['GET'])
+def get_all_predictions():
+    try:
+        page = request.args.get('page', default=1, type=int)
+        per_page = request.args.get('per_page', default=20, type=int)
+        search_query = request.args.get('search', default=None, type=str)
+        
+        with current_app.app_context():
+            # Base query with search filter
+            query = db.session.query(Product)
+            
+            if search_query:
+                query = query.filter(
+                    Product.name.ilike(f'%{search_query}%')
+                )
+            
+            # Order and paginate
+            products = query.order_by(Product.current_price.asc())\
+                .paginate(page=page, per_page=per_page, error_out=False)
+            
+            if not products.items:
+                return jsonify({'message': 'No products found'}), 404
+                
+            engine = RecommendationEngine()
+            results = []
+            
+            for product in products.items:
+                # Get minimal price history (last 14 days)
+                history = db.session.query(PriceHistory)\
+                    .filter_by(product_id=product.product_id)\
+                    .order_by(PriceHistory.valid_from.desc())\
+                    .limit(14)\
+                    .all()
+                
+                product_data = {
+                    'id': str(product.product_id),
+                    'name': product.name,
+                    'retailer': product.retailer.name,
+                    'price': float(product.current_price),
+                    'rating': float(product.rating) if product.rating else None,
+                    'image_url': product.image_url,
+                    'url': product.product_url,
+                    'price_history': [{
+                        'date': h.valid_from.isoformat(),
+                        'price': float(h.price)
+                    } for h in history]
+                }
+                
+                # Generate prediction
+                analyzed = engine._analyze_product(product_data)
+                results.append({
+                    'id': analyzed['id'],
+                    'name': analyzed['name'],
+                    'retailer': analyzed['retailer'],
+                    'current_price': analyzed['price'],
+                    'predicted_price': analyzed['prediction']['predicted_price'],
+                    'confidence': analyzed['prediction']['confidence'],
+                    'recommendation': analyzed['recommendation'],
+                    'value_score': analyzed['value_score'],
+                    'image_url': analyzed['image_url'],
+                    'url': analyzed['url'],
+                    'rating': analyzed['rating']
+                })
+            
+            return jsonify({
+                'products': results,
+                'page': products.page,
+                'per_page': products.per_page,
+                'total_pages': products.pages,
+                'total_items': products.total
+            })
+            
+    except Exception as e:
+        current_app.logger.error(f"Prediction error: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
+
     
 group_keywords = [
     {'keyword': 'onion', 'exclude': ['spring']},
-    {'keyword': 'banana', 'exclude': ['muller corner']},
+    {'keyword': 'banana', 'exclude': ['muller corner','muller corner vanilla']},
     {'keyword': 'oranges'},
-    {'keyword': 'skimmed milk', 'exclude': ['semi-skimmed', 'whole']},
-    {'keyword': 'semi-skimmed milk', 'exclude': ['skimmed', 'whole']},
+    {'keyword': 'skimmed milk', 'exclude': ['semi-skimmed', 'whole', 'semi skimmed']},
+    {'keyword': 'semi skimmed milk', 'exclude': ['skimmed', 'whole']},
     {'keyword': 'whole milk', 'exclude': ['skimmed', 'semi-skimmed']},
     {'keyword': 'white potatoes', 'exclude': ['baked']},
     {'keyword': 'baked potatoes', 'exclude': ['white']},
@@ -275,44 +354,3 @@ def grouped_products():
         current_app.logger.error(f"Grouped products error: {str(e)}", exc_info=True)
         return jsonify({'error': 'Internal server error'}), 500
 
-#     @product_bp.route("/api/products/grouped", methods=["GET"])
-# def grouped_products():
-#     try:
-#         result = []
-        
-#         for keyword in group_keywords:
-#             # Flexible search: either regex or LIKE pattern
-#             search_pattern = f"%{keyword}%"
-#             products = db.session.query(Product)\
-#                        .filter(
-#                            or_(
-#                                Product.name.ilike(search_pattern),
-#                                Product.name.op('~')(rf"\y{re.escape(keyword)}\y")
-#                            )
-#                        )\
-#                        .all()
-
-#             if not products:
-#                 current_app.logger.warning(f"No products found for keyword: {keyword}")
-#                 continue
-
-#             # Sort by price (handle None values)
-#             sorted_products = sorted(
-#                 [p for p in products if p.current_price is not None],
-#                 key=lambda x: x.current_price
-#             )
-            
-#             if not sorted_products:
-#                 continue
-
-#             result.append({
-#                 'keyword': keyword,
-#                 'recommended': serialize_product(sorted_products[0]),
-#                 'others': [serialize_product(p) for p in sorted_products[1:4]]  # Top 3 others
-#             })
-
-#         return jsonify(result if result else {"message": "No matching products found"})
-
-#     except Exception as e:
-#         current_app.logger.error(f"Grouped products error: {str(e)}", exc_info=True)
-#         return jsonify({'error': 'Internal server error'}), 500

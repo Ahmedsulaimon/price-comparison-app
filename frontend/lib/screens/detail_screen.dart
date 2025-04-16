@@ -2,16 +2,24 @@ import 'package:flutter/material.dart';
 
 import 'package:url_launcher/url_launcher.dart';
 
+import '../models/product.dart';
 import '../services/api_service.dart';
 
-class DetailScreen extends StatelessWidget {
+class DetailScreen extends StatefulWidget {
   final ProductGroup productGroup;
 
    const DetailScreen({
     super.key,
     required this.productGroup,
   });
-  
+
+  @override
+  State<DetailScreen> createState() => _DetailScreenState();
+}
+
+class _DetailScreenState extends State<DetailScreen> {
+ String? _filter;
+ 
  Future<void> _launchURL(String url) async {
   final Uri uri = Uri.parse(url);
   if (!await launchUrl( uri,
@@ -20,12 +28,22 @@ class DetailScreen extends StatelessWidget {
   }
 }
 
+ List<Product> get _filteredProducts {
+    if (_filter == 'best_rated') {
+      return widget.productGroup.others
+          .where((p) => p.rating != null)
+          .toList()
+          ..sort((a, b) => (b.rating ?? 0).compareTo(a.rating ?? 0));
+    }
+    return widget.productGroup.others;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
            
-        title: Text(productGroup.keyword, style: const TextStyle(
+        title: Text(widget.productGroup.keyword, style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold
 
@@ -40,7 +58,7 @@ class DetailScreen extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: GestureDetector(
-                onTap: () => _launchURL(productGroup.recommended.url),
+                onTap: () => _launchURL(widget.productGroup.recommended.url),
                 child: Card(
                   elevation: 4,
                   shape: RoundedRectangleBorder(
@@ -53,9 +71,9 @@ class DetailScreen extends StatelessWidget {
                         aspectRatio: 16/9,
                         child: ClipRRect(
                           borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                          child: productGroup.recommended.imageUrl.isNotEmpty
+                          child: widget.productGroup.recommended.imageUrl.isNotEmpty
                               ? Image.network(
-                                  productGroup.recommended.imageUrl,
+                                  widget.productGroup.recommended.imageUrl,
                                   fit: BoxFit.cover,
                                   width: double.infinity,
                                 )
@@ -71,7 +89,7 @@ class DetailScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              productGroup.recommended.name,
+                              widget.productGroup.recommended.name,
                               style: Theme.of(context).textTheme.titleLarge,
                             ),
                             const SizedBox(height: 8),
@@ -79,27 +97,27 @@ class DetailScreen extends StatelessWidget {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  '£${productGroup.recommended.price.toStringAsFixed(2)}',
+                                  '£${widget.productGroup.recommended.price.toStringAsFixed(2)}',
                                   style: const TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                                if (productGroup.recommended.rating != null)
+                                if (widget.productGroup.recommended.rating != null)
                                   Row(
                                     children: [
                                       const Icon(Icons.star, color: Colors.amber, size: 20),
                                       const SizedBox(width: 4),
-                                      Text(productGroup.recommended.rating!.toStringAsFixed(1)),
+                                      Text(widget.productGroup.recommended.rating!.toStringAsFixed(1)),
                                     ],
                                   ),
                               ],
                             ),
-                            if (productGroup.recommended.unitPrice != null)
+                            if (widget.productGroup.recommended.unitPrice != null)
                               Padding(
                                 padding: const EdgeInsets.only(top: 4),
                                 child: Text(
-                                  'Unit price: £${productGroup.recommended.unitPrice!.toStringAsFixed(2)}/${productGroup.recommended.baseUnit ?? 'unit'}',
+                                  'Unit price: £${widget.productGroup.recommended.unitPrice!.toStringAsFixed(2)}/${widget.productGroup.recommended.baseUnit ?? 'unit'}',
                                   style: TextStyle(
                                     color: Colors.grey[600],
                                     fontSize: 14,
@@ -110,7 +128,7 @@ class DetailScreen extends StatelessWidget {
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton(
-                                onPressed: () => _launchURL(productGroup.recommended.url),
+                                onPressed: () => _launchURL(widget.productGroup.recommended.url),
                                 child: const Text('View on Retailer Site'),
                               ),
                             ),
@@ -123,14 +141,37 @@ class DetailScreen extends StatelessWidget {
               ),
             ),
 
-            // Other Products Grid
+            // Filterable Other Products Section
             Padding(
               padding: const EdgeInsets.all(16.0),
-              child: Text(
-                'Other Options',
-                style: Theme.of(context).textTheme.titleMedium,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Other Options', style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 8),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        FilterChip(
+                          label: const Text('All'),
+                          selected: _filter == null,
+                          onSelected: (_) => setState(() => _filter = null),
+                        ),
+                        const SizedBox(width: 8),
+                        FilterChip(
+                          label: const Text('Best Rated'),
+                          selected: _filter == 'best_rated',
+                          onSelected: (_) => setState(() => _filter = 'best_rated'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
+
+            // Products Grid
             GridView.builder(
               physics: const NeverScrollableScrollPhysics(),
               shrinkWrap: true,
@@ -141,9 +182,9 @@ class DetailScreen extends StatelessWidget {
                 mainAxisSpacing: 16,
                 childAspectRatio: 0.7,
               ),
-              itemCount: productGroup.others.length,
+              itemCount: _filteredProducts.length,
               itemBuilder: (context, index) {
-                final product = productGroup.others[index];
+                final product = _filteredProducts[index];
                 return GestureDetector(
                   onTap: () => _launchURL(product.url),
                   child: Card(
@@ -151,59 +192,92 @@ class DetailScreen extends StatelessWidget {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Stack(
                       children: [
-                        Expanded(
-                          child: ClipRRect(
-                            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                            child: product.imageUrl.isNotEmpty
-                                ? Image.network(
-                                    product.imageUrl,
-                                    fit: BoxFit.cover,
-                                    width: double.infinity,
-                                  )
-                                : Container(
-                                    color: Colors.grey[200],
-                                    child: const Center(child: Icon(Icons.image)),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: ClipRRect(
+                                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                                child: product.imageUrl.isNotEmpty
+                                    ? Image.network(
+                                        product.imageUrl,
+                                        fit: BoxFit.cover,
+                                        width: double.infinity,
+                                      )
+                                    : Container(
+                                        color: Colors.grey[200],
+                                        child: const Center(child: Icon(Icons.image)),
+                              ),
+                            ),
+                             ),
+
+                             Expanded(child: Padding(
+                              padding: const EdgeInsets.all(12.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    product.name,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
                                   ),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(12.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                product.name,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '£${product.price.toStringAsFixed(2)}',
-                                style: const TextStyle(fontSize: 16),
-                              ),
-                              if (product.unitPrice != null)
-                                Text(
-                                  '£${product.unitPrice!.toStringAsFixed(2)}/${product.baseUnit ?? 'unit'}',
-                                  style: TextStyle(
-                                    color: Colors.grey[600],
-                                    fontSize: 12,
+                                 // const SizedBox(height: 4),
+                                  Text(
+                                    '£${product.price.toStringAsFixed(2)}',
+                                    style: const TextStyle(fontSize: 16),
                                   ),
-                                ),
-                              const SizedBox(height: 4),
-                              Text(
-                                product.retailer,
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
+                                  if (product.unitPrice != null)
+                                    Text(
+                                      '£${product.unitPrice!.toStringAsFixed(2)}/${product.baseUnit ?? 'unit'}',
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold
+                                      ),
+                                    ),
+                                 // const SizedBox(height: 4),
+                                  Text(
+                                    product.retailer,
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold
+                                    ),
+                                  ),
+                                ],
+                            ), ),)
+                          ],
                         ),
+                        if (product.rating != null && product.rating! >= 4.0)
+                          Positioned(
+                            top: 8,
+                            left: 8,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.amber[700],
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.star, color: Colors.white, size: 14),
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    product.rating!.toStringAsFixed(1),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   ),
