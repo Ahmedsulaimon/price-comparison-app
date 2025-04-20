@@ -11,16 +11,7 @@ class PriceService:
     def __init__(self, db):
         self.db = db
         self.scheduler = BackgroundScheduler()
-        # In product service
-        self.category_keywords = {
-                    'onion': ['onion'], 'banana': ['banana'], 'oranges': ['oranges'],
-                    'milk': ['skimmed milk', 'semi-skimmed milk', 'whole milk'],
-                    'butter': ['butter'], 'carrot': ['carrot'], 'cucumber': ['cucumber'],
-                    'pepper': ['pepper'], 'potatoes': ['potatoes'], 'Bread': ['Bread'],
-                    'chicken breast': ['chicken breast'], 'Granulated Sugar': ['Granulated Sugar'],
-                    'rice': ['rice'], 'avocado': ['avocado'], 'Baked Beans': ['Baked Beans'],
-                    'Muller Corner': ['Muller Corner']
-            }
+       
     
     @staticmethod
     def normalize_name(name):

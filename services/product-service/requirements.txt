@@ -14,3 +14,4 @@ http-adapter==1.0.0
 pandas==2.2.3
 numpy==2.2.4
 rapidfuzz==3.13.0
+pytest==8.3.5

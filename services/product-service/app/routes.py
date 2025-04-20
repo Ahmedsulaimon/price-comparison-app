@@ -120,19 +120,12 @@ def compare_products():
         return jsonify({'error': 'Missing required parameter: name'}), 400
     
     try:
-            
-        escaped_product_name = re.escape(product_name)
-        regex_pattern = rf'\y{escaped_product_name}\y'  # Whole-word match
+        # SQLite-compatible search (case-insensitive contains)
+        search_pattern = f"%{product_name}%"
         
         with current_app.app_context():
-
             query = db.session.query(Product).filter(
-                Product.name.op('~*')(regex_pattern)  # Case-insensitive regex match
-            )
-        # with current_app.app_context():
-        #     # Base query
-        #     query = db.session.query(Product).filter(
-        #         func.lower(Product.name).contains(func.lower(product_name)))
+                Product.name.ilike(search_pattern))
             
             if retailer:
                 query = query.join(Retailer).filter(
@@ -154,9 +147,9 @@ def compare_products():
                     .first()
                 
                 history = db.session.query(PriceHistory)\
-                .filter_by(product_id=p.product_id)\
-                .order_by(PriceHistory.valid_from.desc())\
-                .all()
+                    .filter_by(product_id=p.product_id)\
+                    .order_by(PriceHistory.valid_from.desc())\
+                    .all()
                 
                 result.append({
                     'id': str(p.product_id),
@@ -165,15 +158,15 @@ def compare_products():
                     'price': float(p.current_price),
                     'rating': float(p.rating) if p.rating else None,
                     'unit_price': float(latest_price[0]) if latest_price and latest_price[0] else None,
-                    'base_unit' : p.base_unit,
+                    'base_unit': p.base_unit,
                     'image_url': p.image_url,
                     'url': p.product_url,
                     'badge': p.badges,
                     'price_history': [{
-                            'date': h.valid_from.isoformat(),
-                            'price': float(h.price),
-                            'unit_price': float(h.unit_price) if h.unit_price else None
-                            } for h in history]
+                        'date': h.valid_from.isoformat(),
+                        'price': float(h.price),
+                        'unit_price': float(h.unit_price) if h.unit_price else None
+                    } for h in history]
                 })
             
             return jsonify(result)
@@ -181,8 +174,6 @@ def compare_products():
     except Exception as e:
         current_app.logger.error(f"Comparison error: {str(e)}")
         return jsonify({'error': 'Internal server error'}), 500
-    
-
 
 
 @product_bp.route('/api/recommendations', methods=['GET'])

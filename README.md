@@ -14,9 +14,11 @@
 |   |   |   |-- __init__.py
 |   |   |   |-- config.py
 |   |   |   |-- models.py
+|   |   |   |-- extensions.py
 |   |   |   |-- routes.py
-|   |   |   |-- service.py
+|   |   |   |-- service/
 |   |   |-- main.py
+|   |   |-- test/
 |   |   |-- requirements.txt
 |   |   |-- Dockerfile
 |   |   |-- alembic.ini

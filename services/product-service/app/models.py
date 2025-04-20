@@ -2,6 +2,8 @@ from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import UUID, func, text
 from app.extensions import db
+import uuid
+from sqlalchemy.dialects.postgresql import UUID
 
 class Retailer(db.Model):
     __tablename__ = 'retailers'
@@ -13,8 +15,8 @@ class Retailer(db.Model):
 
 class Product(db.Model):
     __tablename__ = 'products'
-    
-    product_id = db.Column(UUID(as_uuid=True), primary_key=True, server_default=text('gen_random_uuid()'))
+    #   product_id = db.Column(UUID(as_uuid=True), primary_key=True, server_default=text('gen_random_uuid()'))
+    product_id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     retailer_id = db.Column(db.Integer, db.ForeignKey('retailers.retailer_id'))
     external_id = db.Column(db.String(255))
     name = db.Column(db.String(255), nullable=False)
@@ -34,7 +36,7 @@ class Product(db.Model):
 class PriceHistory(db.Model):
     __tablename__ = 'price_history'
 
-    entry_id = db.Column(UUID(as_uuid=True), primary_key=True, server_default=text('gen_random_uuid()'))
+    entry_id = db.Column(UUID(as_uuid=True), primary_key=True,  default=uuid.uuid4)
     product_id = db.Column(UUID(as_uuid=True), db.ForeignKey('products.product_id'), nullable=False)
     price = db.Column(db.Numeric(10,2), nullable=False)
     unit_price = db.Column(db.Numeric(10,2))

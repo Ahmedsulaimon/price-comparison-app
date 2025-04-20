@@ -100,6 +100,16 @@ class _PricePredictionPageState extends State<PricePredictionPage> {
       ),
       body: Column(
         children: [
+            const Row(
+                children: [
+                  Icon(Icons.warning_amber, color: Colors.amber, size: 40),
+                  SizedBox(width: 8),
+                   Text("Predicted trends are estimates; \nconsider market conditions before purchasing",
+             style: TextStyle(
+              fontWeight: FontWeight.bold
+              
+             ),),
+                ],),
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: TextField(
@@ -116,6 +126,7 @@ class _PricePredictionPageState extends State<PricePredictionPage> {
               },
             ),
           ),
+          
           Expanded(
             child: _products.isEmpty && !_isLoading
                 ? const Center(child: Text('No predictions available'))
