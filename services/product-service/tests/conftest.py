@@ -1,9 +1,16 @@
 # tests/conftest.py
+from typing import List, Optional
 import pytest
 from flask import Flask
 from app.extensions import db
 
 #python -m pytest tests/ -v
+#  Functional Testing & Coverage
+# •	6 Pytest integration tests cover all core endpoints; all pass consistently.
+# •	Coverage: product Extractors from retailer websites and custom api Routes.
+
+
+
 @pytest.fixture
 def app():
     """Create and configure a new app instance for each test."""

@@ -104,7 +104,7 @@ class _PricePredictionPageState extends State<PricePredictionPage> {
                 children: [
                   Icon(Icons.warning_amber, color: Colors.amber, size: 40),
                   SizedBox(width: 8),
-                   Text("Predicted trends are estimates; \nconsider market conditions before purchasing",
+                   Text("Predicted forecasts are estimates, not guarantees.",
              style: TextStyle(
               fontWeight: FontWeight.bold
               

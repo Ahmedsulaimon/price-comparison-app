@@ -124,6 +124,15 @@ class _DetailScreenState extends State<DetailScreen> {
                                   ),
                                 ),
                               ),
+                              const SizedBox(height: 8),
+                                Text(
+                              widget.productGroup.recommended.retailer,
+                              style: const TextStyle(
+                                color: Colors.grey,
+                                fontWeight: FontWeight.bold
+                              )
+                            ),
+
                             const SizedBox(height: 16),
                             SizedBox(
                               width: double.infinity,
@@ -140,8 +149,8 @@ class _DetailScreenState extends State<DetailScreen> {
                 ),
               ),
             ),
-
-            // Filterable Other Products Section
+             
+            // // Filterable Other Products Section
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
@@ -224,7 +233,7 @@ class _DetailScreenState extends State<DetailScreen> {
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(fontWeight: FontWeight.bold),
                                   ),
-                                 // const SizedBox(height: 4),
+                                
                                   Text(
                                     '£${product.price.toStringAsFixed(2)}',
                                     style: const TextStyle(fontSize: 16),
@@ -238,7 +247,7 @@ class _DetailScreenState extends State<DetailScreen> {
                                         fontWeight: FontWeight.bold
                                       ),
                                     ),
-                                 // const SizedBox(height: 4),
+                                 
                                   Text(
                                     product.retailer,
                                     style: TextStyle(
