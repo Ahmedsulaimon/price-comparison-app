@@ -6,3 +6,12 @@ psycopg2-binary==2.9.10
 flask-migrate==4.0.5
 python-dotenv==1.0.1
 flask-cors==5.0.1
+APScheduler==3.11.0
+requests==2.32.3
+sqlalchemy==2.0.40
+urllib3==2.3.0
+http-adapter==1.0.0
+pandas==2.2.3
+numpy==2.2.4
+rapidfuzz==3.13.0
+pytest==8.3.5
